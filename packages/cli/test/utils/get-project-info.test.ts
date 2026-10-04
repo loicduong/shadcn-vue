@@ -85,3 +85,14 @@ describe('get project info', async () => {
     ).toStrictEqual(type)
   })
 })
+
+describe('get project info source directory', () => {
+  it('treats app/ as the source directory of a Nuxt 4 project', async () => {
+    const info = await getProjectInfo(
+      path.resolve(__dirname, '../fixtures/frameworks/nuxt4'),
+    )
+
+    expect(info?.framework).toStrictEqual(FRAMEWORKS.nuxt4)
+    expect(info?.isSrcDir).toBe(true)
+  })
+})

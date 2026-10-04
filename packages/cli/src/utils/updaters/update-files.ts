@@ -77,7 +77,7 @@ export async function updateFiles(
     }
 
     let filePath = resolveFilePath(file, config, {
-      // isSrcDir: projectInfo?.isSrcDir,
+      isSrcDir: projectInfo?.isSrcDir,
       framework: projectInfo?.framework.name,
       commonRoot: findCommonRoot(
         files.map(f => f.path),
@@ -305,7 +305,7 @@ export function resolveFilePath(
   file: z.infer<typeof registryItemFileSchema>,
   config: Config,
   options: {
-    // isSrcDir?: boolean
+    isSrcDir?: boolean
     commonRoot: string
     framework?: ProjectInfo['framework']['name']
     path?: string
@@ -353,12 +353,8 @@ export function resolveFilePath(
       }
     }
 
-    // return options.isSrcDir
-    //   ? path.join(config.resolvedPaths.cwd, 'src', target.replace('src/', ''))
-    //   : path.join(config.resolvedPaths.cwd, target.replace('src/', ''))
-
     return assertPathWithin(
-      path.join(config.resolvedPaths.cwd, target.replace('src/', '')),
+      resolveSourceDirTarget(target, config.resolvedPaths.cwd, options),
       config.resolvedPaths.cwd,
       file,
     )
@@ -368,6 +364,29 @@ export function resolveFilePath(
 
   const relativePath = resolveNestedFilePath(file.path, options.commonRoot, config)
   return assertPathWithin(path.join(targetDir!, relativePath), targetDir!, file)
+}
+
+// Nuxt 4 keeps these directories at the project root, outside `app/`.
+const NUXT_ROOT_DIRS = ['server', 'shared', 'public', 'modules', 'layers']
+
+// Registry targets are written relative to the source directory: `src/` for
+// Vite-style projects, `app/` for Nuxt 4. Prefix the target with it when the
+// project has one, without doubling a prefix the registry already included.
+function resolveSourceDirTarget(
+  target: string,
+  cwd: string,
+  options: { isSrcDir?: boolean, framework?: ProjectInfo['framework']['name'] },
+) {
+  if (options.framework === 'nuxt4') {
+    const isRootDir = NUXT_ROOT_DIRS.includes(target.split('/')[0])
+    return options.isSrcDir && !isRootDir
+      ? path.join(cwd, 'app', target.replace(/^app\//, ''))
+      : path.join(cwd, target)
+  }
+
+  return options.isSrcDir
+    ? path.join(cwd, 'src', target.replace(/^src\//, ''))
+    : path.join(cwd, target.replace(/^src\//, ''))
 }
 
 // `path` and `target` come from whatever registry the user installed from, and

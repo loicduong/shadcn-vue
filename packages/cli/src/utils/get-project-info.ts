@@ -107,7 +107,7 @@ export async function getProjectInfo(cwd: string): Promise<ProjectInfo | null> {
   const [
     detectedFramework,
     typescript,
-    isSrcDir,
+    hasSrcDir,
     // isTsx,
     tailwindConfigFile,
     tailwindCssFile,
@@ -126,6 +126,11 @@ export async function getProjectInfo(cwd: string): Promise<ProjectInfo | null> {
     getPackageInfo(cwd, false),
     getPackageManager(cwd, { withFallback: true }),
   ])
+
+  // Nuxt 4 uses `app/` as its source directory instead of `src/`.
+  const isSrcDir = detectedFramework?.name === 'nuxt4'
+    ? await fs.pathExists(path.resolve(cwd, 'app'))
+    : hasSrcDir
 
   const type: ProjectInfo = {
     framework: detectedFramework || FRAMEWORKS.manual,
